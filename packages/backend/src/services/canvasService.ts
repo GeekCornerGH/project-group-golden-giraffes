@@ -37,7 +37,7 @@ export type CachedCanvas = LockedCanvas | UnlockedCanvas;
  * or if the image is locked (and therefore cannot be modified) the path to the canvas image on the
  * file system.
  */
-const CANVAS_CACHE: Record<number, CachedCanvas> = {};
+const CANVAS_CACHE: Record<number, { canvas: CachedCanvas, expire: number }> = {};
 
 export function initializeCache(): void {
   // look through the files in the canvas directory and build the locked cache object from them
@@ -54,9 +54,12 @@ export function initializeCache(): void {
     console.log(`Loaded cached canvas ${canvasPath}`);
 
     CANVAS_CACHE[canvasId] = {
-      isLocked: true,
-      canvasPath: `${config.paths.canvases}/${filename}`,
-    };
+      canvas: {
+        isLocked: true,
+        canvasPath: `${config.paths.canvases}/${filename}`,
+      },
+      expire: Date.now() + config.cacheLength
+    }
   }
 }
 
@@ -199,13 +202,13 @@ export async function getCurrentCanvas(): Promise<[number, CachedCanvas]> {
  * @returns The cached canvas
  */
 export async function getCanvasPng(canvasId: number): Promise<CachedCanvas> {
-  if (!CANVAS_CACHE[canvasId]) {
+  if (!CANVAS_CACHE[canvasId] || CANVAS_CACHE[canvasId].expire < Date.now()) {
     console.debug(`Cache miss for canvas ${canvasId}`);
     return getAndCacheCanvas(canvasId);
   }
 
   console.debug(`Cache hit for canvas ${canvasId}`);
-  return CANVAS_CACHE[canvasId];
+  return CANVAS_CACHE[canvasId].canvas;
 }
 
 /**
@@ -221,7 +224,7 @@ export async function updateManyCachedPixels(
 ): Promise<void> {
   const cachedCanvas = CANVAS_CACHE[canvasId];
 
-  if (!cachedCanvas || cachedCanvas.isLocked) {
+  if (!cachedCanvas || cachedCanvas.canvas.isLocked || cachedCanvas.expire < Date.now()) {
     return;
   }
 
@@ -246,7 +249,7 @@ export function updateCachedCanvasPixel(
 ) {
   const cachedCanvas = CANVAS_CACHE[canvasId];
 
-  if (!cachedCanvas || cachedCanvas.isLocked) {
+  if (!cachedCanvas || cachedCanvas.canvas.isLocked || cachedCanvas.expire < Date.now()) {
     return;
   }
 
@@ -313,13 +316,16 @@ async function getAndCacheCanvas(canvasId: number): Promise<CachedCanvas> {
   if (canvas.locked) {
     const path = saveCanvasToFileSystem(canvas, pixels);
     CANVAS_CACHE[canvasId] = {
-      isLocked: true,
-      canvasPath: path,
+      canvas: {
+        isLocked: true,
+        canvasPath: path,
+      },
+      expire: Date.now() + config.cacheLength
     };
 
     console.debug(`Canvas ${canvasId} saved to ${path}`);
   } else {
-    CANVAS_CACHE[canvasId] = unlockedCanvas;
+    CANVAS_CACHE[canvasId] = {canvas: unlockedCanvas, expire: Date.now() + config.cacheLength};
     console.debug(`Canvas ${canvasId} cached in memory`);
   }
 

@@ -43,6 +43,7 @@ const config = {
   allColorsGlobal: process.env.ALL_COLORS_GLOBAL === "true",
   discordServerInvite: process.env.DISCORD_SERVER_INVITE,
   botApiKey: process.env.BOT_API_KEY,
+  cacheLength: Number(process.env.CACHE_DURATION || 10 * 60 * 1000)
 } as const;
 
 if (!fs.existsSync(config.paths.canvases)) {
