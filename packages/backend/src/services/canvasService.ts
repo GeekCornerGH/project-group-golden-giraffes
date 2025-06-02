@@ -229,8 +229,8 @@ export async function updateManyCachedPixels(
   }
 
   for (const pixel of pixels) {
-    const pixelIndex = pixel.y * cachedCanvas.width + pixel.x;
-    cachedCanvas.pixels[pixelIndex] = pixel.rgba;
+    const pixelIndex = pixel.y * cachedCanvas.canvas.width + pixel.x;
+    cachedCanvas.canvas.pixels[pixelIndex] = pixel.rgba;
   }
 }
 
@@ -253,8 +253,8 @@ export function updateCachedCanvasPixel(
     return;
   }
 
-  const pixelIndex = coordinates.y * cachedCanvas.width + coordinates.x;
-  cachedCanvas.pixels[pixelIndex] = color;
+  const pixelIndex = coordinates.y * cachedCanvas.canvas.width + coordinates.x;
+  cachedCanvas.canvas.pixels[pixelIndex] = color;
 }
 
 export async function getCanvasPixels(canvasId: number): Promise<PixelColor[]> {
